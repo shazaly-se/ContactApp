@@ -93,38 +93,58 @@ namespace ContactApp.Controllers
             if (id != contact.Id)
                 return NotFound();
 
-            if (ModelState.IsValid)
+            // ✅ Validate model FIRST
+            if (!ModelState.IsValid)
             {
-                var contactFromDb = await _context.Contacts.FindAsync(id);
-
-                contactFromDb.FirstName = contact.FirstName;
-                contactFromDb.LastName = contact.LastName;
-                contactFromDb.Email = contact.Email;
-                contactFromDb.Phone = contact.Phone;
-                if (ProfileImage != null && ProfileImage.Length > 0)
+                foreach (var error in ModelState.Values.SelectMany(v => v.Errors))
                 {
-                    BlobContainerClient container = new BlobContainerClient(_connectionString, _containerName);
-                    await container.CreateIfNotExistsAsync(PublicAccessType.Blob);
-
-                    // Delete old blob if exists
-                    if (!string.IsNullOrEmpty(contactFromDb.ProfileImage))
-                    {
-                        var oldBlobClient = container.GetBlobClient(contactFromDb.ProfileImage);
-                        await oldBlobClient.DeleteIfExistsAsync();
-                    }
-
-                    // Upload new blob
-                    string fileName = Guid.NewGuid() + Path.GetExtension(ProfileImage.FileName);
-                    var newBlobClient = container.GetBlobClient(fileName);
-                    await newBlobClient.UploadAsync(ProfileImage.OpenReadStream());
-
-                    // Save only filename in DB
-                    contactFromDb.ProfileImage = fileName;
+                    Console.WriteLine(error.ErrorMessage);
                 }
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+
+                return View(contact);
             }
-            return View(contact);
+
+            // ✅ Get existing record
+            var contactFromDb = await _context.Contacts.FindAsync(id);
+            if (contactFromDb == null)
+                return NotFound();
+
+            // ✅ Update basic fields
+            contactFromDb.FirstName = contact.FirstName;
+            contactFromDb.LastName = contact.LastName;
+            contactFromDb.Email = contact.Email;
+            contactFromDb.Phone = contact.Phone;
+
+            // ✅ Handle image upload
+            if (ProfileImage != null && ProfileImage.Length > 0)
+            {
+                BlobContainerClient container = new BlobContainerClient(_connectionString, _containerName);
+                await container.CreateIfNotExistsAsync(PublicAccessType.Blob);
+
+                // 🔥 Delete old image (important fix)
+                if (!string.IsNullOrEmpty(contactFromDb.ProfileImage))
+                {
+                    var oldBlobClient = container.GetBlobClient(contactFromDb.ProfileImage);
+                    await oldBlobClient.DeleteIfExistsAsync();
+                }
+
+                // 🔥 Upload new image
+                string fileName = Guid.NewGuid() + Path.GetExtension(ProfileImage.FileName);
+                var newBlobClient = container.GetBlobClient(fileName);
+
+                using (var stream = ProfileImage.OpenReadStream())
+                {
+                    await newBlobClient.UploadAsync(stream, overwrite: true);
+                }
+
+                // Save filename only
+                contactFromDb.ProfileImage = fileName;
+            }
+
+            // ✅ Save changes
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(Index));
         }
 
         // DELETE GET
