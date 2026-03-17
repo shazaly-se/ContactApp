@@ -99,6 +99,8 @@ namespace ContactApp.Controllers
 
                 contactFromDb.FirstName = contact.FirstName;
                 contactFromDb.LastName = contact.LastName;
+                contactFromDb.Email = contact.Email;
+                contactFromDb.Phone = contact.Phone;
                 if (ProfileImage != null && ProfileImage.Length > 0)
                 {
                     BlobContainerClient container = new BlobContainerClient(_connectionString, _containerName);
