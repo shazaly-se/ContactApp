@@ -140,6 +140,11 @@ namespace ContactApp.Controllers
                 // Save filename only
                 contactFromDb.ProfileImage = fileName;
             }
+            else
+            {
+                // 🔥 KEEP old image (important)
+                contactFromDb.ProfileImage = contact.ProfileImage;
+            }
 
             // ✅ Save changes
             await _context.SaveChangesAsync();
