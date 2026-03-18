@@ -92,6 +92,7 @@ namespace ContactApp.Controllers
         {
             if (id != contact.Id)
                 return NotFound();
+            ModelState.Remove("ProfileImageFile");
 
             // ✅ Validate model FIRST
             if (!ModelState.IsValid)
