@@ -88,7 +88,7 @@ namespace ContactApp.Controllers
 
         // EDIT POST
         [HttpPost]
-        public async Task<IActionResult> Edit(int id, Contact contact, IFormFile ProfileImage)
+        public async Task<IActionResult> Edit(int id, Contact contact, IFormFile ProfileImageFile)
         {
             if (id != contact.Id)
                 return NotFound();
@@ -116,7 +116,7 @@ namespace ContactApp.Controllers
             contactFromDb.Phone = contact.Phone;
 
             // ✅ Handle image upload
-            if (ProfileImage != null && ProfileImage.Length > 0)
+            if (ProfileImageFile != null && ProfileImageFile.Length > 0)
             {
                 BlobContainerClient container = new BlobContainerClient(_connectionString, _containerName);
                 await container.CreateIfNotExistsAsync(PublicAccessType.Blob);
@@ -129,10 +129,10 @@ namespace ContactApp.Controllers
                 }
 
                 // 🔥 Upload new image
-                string fileName = Guid.NewGuid() + Path.GetExtension(ProfileImage.FileName);
+                string fileName = Guid.NewGuid() + Path.GetExtension(ProfileImageFile.FileName);
                 var newBlobClient = container.GetBlobClient(fileName);
 
-                using (var stream = ProfileImage.OpenReadStream())
+                using (var stream = ProfileImageFile.OpenReadStream())
                 {
                     await newBlobClient.UploadAsync(stream, overwrite: true);
                 }
